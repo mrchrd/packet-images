@@ -1,8 +1,13 @@
 FROM scratch
+ARG KERNELVER=3.10.0-1127.13.1.el7
+
 ADD rootfs.tar.gz /
 
 MAINTAINER David Laube <dlaube@packet.net>
-LABEL Description="Packet's CentOS 7 OS base image" Vendor="Packet.net" Version="2018.10.05.00"
+LABEL Description="Packet's CentOS 7 OS base image" Vendor="Packet.net" Version="2020.07.26.00"
+
+RUN yum -y update && yum -y install \
+	epel-release
 
 RUN yum -y update && yum -y install \
 	audit \
@@ -12,7 +17,7 @@ RUN yum -y update && yum -y install \
 	chrony \
 	cloud-init \
 	cloud-utils-growpart \
-	cron \
+	cronie \
 	curl \
 	device-mapper-multipath \
 	dhclient \
@@ -23,12 +28,12 @@ RUN yum -y update && yum -y install \
 	iperf \
 	iscsi-initiator-utils \
 	keyutils \
-	locate \
 	logrotate \
 	make \
 	mdadm \
 	mg \
 	microcode_ctl \
+	mlocate \
 	mtr \
 	net-tools \
 	NetworkManager-team \
@@ -84,15 +89,18 @@ RUN ln -s /usr/lib/systemd/system/setcap.service /etc/systemd/system/setcap.serv
 RUN ln -s /usr/lib/systemd/system/setcap.service /etc/systemd/system/multi-user.target.wants/setcap.service
 
 # Install a specific kernel and deps
-RUN yum -y install kernel-3.10.0-862.14.4.el7 microcode linux-firmware grub2-efi grub2 efibootmgr
+RUN yum -y install "kernel-${KERNELVER}" microcode linux-firmware grub2-efi grub2 efibootmgr
 
 # Adjust generic initrd
-RUN dracut --filesystems="ext4 vfat" --mdadmconf --force /boot/initramfs-3.10.0-862.14.4.el7.x86_64.img 3.10.0-862.14.4.el7.x86_64
+RUN dracut --filesystems="ext4 vfat" --mdadmconf --force "/boot/initramfs-${KERNELVER}.x86_64.img" "${KERNELVER}.x86_64"
 
 # Adjust root account
 RUN passwd -d root && passwd -l root
 
 # Clean yum cache
 RUN yum clean all
+
+# SELinux: Relabel complete filesystem
+RUN touch /.autorelabel
 
 # vim: set tabstop=4 shiftwidth=4:
